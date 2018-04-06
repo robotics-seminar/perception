@@ -360,6 +360,7 @@ class KinectSensorBridged(CameraSensor):
         self.topic_image_depth = '/kinect2/%s/image_depth_rect' %(quality)
         self.topic_info_camera = '/kinect2/%s/camera_info' %(quality)
         
+
         self._initialized = False
         self._format = None
         self._camera_intr = None
@@ -534,6 +535,45 @@ class KinectSensorBridged(CameraSensor):
         median_depth = Image.median_images(depths)
         median_depth.data[median_depth.data == 0.0] = fill_depth
         return median_depth
+
+class GazeboKinectSensorBridged(KinectSensorBridged):
+    """Class for interacting with a Kinect v2 RGBD sensor through the kinect bridge
+    https://github.com/code-iai/iai_kinect2. This is preferrable for visualization and debug
+    because the kinect bridge will continuously publish image and point cloud info.
+    """
+
+    def __init__(self, quality=Kinect2BridgedQuality.HD, frame='kinect2_rgb_optical_frame'):
+        
+        super(GazeboKinectSensorBridged, self).__init__
+        
+        self.topic_image_color = '/camera/image_raw' 
+        self.topic_image_depth = '/camera/depth/image_raw'
+        self.topic_info_camera = '/camera/camera_info' 
+        """
+        Create a new class for gazebo stuff
+        Modify kinect and rgbd factories
+        add into _init_
+
+        Create a ROS service to send RGB, D messages
+        Should accept a call for: resolution, image types
+        Should return types, images
+        """
+            
+    def _set_camera_properties(self, msg):
+        """ Set the camera intrinsics from an info msg. """
+        focal_x = msg.K[0]
+        focal_y = msg.K[4]
+        center_x = msg.K[2]
+        center_y = msg.K[5]
+        im_height = msg.height
+        im_width = msg.width
+        self._camera_intr = CameraIntrinsics(self._frame, focal_x, focal_y,
+                                             center_x, center_y,
+                                             height=im_height,
+                                             width=im_width)
+
+
+        
 
 
 class VirtualKinect2Sensor(CameraSensor):
@@ -753,6 +793,8 @@ class Kinect2SensorFactory:
                                      frame=cfg['frame'])
         elif sensor_type == 'bridged':
             s = KinectSensorBridged(quality=cfg['quality'], frame=cfg['frame'])
+        elif sensor_type == 'gazebo':
+            s = GazeboKinectSensorBridged(quality=cfg['quality'], frame=cfg['frame'])
         else:
             raise ValueError('Kinect2 sensor type %s not supported' %(sensor_type))
         return s

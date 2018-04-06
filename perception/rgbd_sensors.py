@@ -2,7 +2,7 @@
 RGBD Sensor factory
 Author: Jeff Mahler
 """
-from . import Kinect2Sensor, VirtualKinect2Sensor, PrimesenseSensor, VirtualPrimesenseSensor, PrimesenseSensor_ROS, EnsensoSensor, PhoXiSensor, KinectSensorBridged
+from . import Kinect2Sensor, VirtualKinect2Sensor, PrimesenseSensor, VirtualPrimesenseSensor, PrimesenseSensor_ROS, EnsensoSensor, PhoXiSensor, KinectSensorBridged, GazeboKinectSensorBridged
 
 class RgbdSensorFactory:
     """ Factory class for Rgbd camera sensors. """
@@ -25,6 +25,8 @@ class RgbdSensorFactory:
                               frame=cfg['frame'])
         elif sensor_type == 'bridged_kinect2':
             s = KinectSensorBridged(quality=cfg['quality'], frame=cfg['frame'])
+        elif sensor_type == 'gazebo_bridged_kinect2':
+            s = GazeboKinectSensorBridged(quality=cfg['quality'], frame=cfg['frame'])
         elif sensor_type == 'virtual_kinect2':
             s = VirtualKinect2Sensor(cfg['image_dir'],
                                      frame=cfg['frame'])
