@@ -367,6 +367,8 @@ class KinectSensorBridged(CameraSensor):
         self._cur_depth_im = None
         self._running = False
         self._bridge = CvBridge()
+
+
         
     def __del__(self):
         """Automatically stop the sensor for safety.
@@ -417,12 +419,19 @@ class KinectSensorBridged(CameraSensor):
         encoding = image_msg.encoding
         try:
             depth_arr = self._bridge.imgmsg_to_cv2(image_msg, encoding)
-            import pdb; pdb.set_trace()
+            # print (depth_arr)
+            # import pdb; pdb.set_trace()
 
         except CvBridgeError as e:
             rospy.logerr(e)
-        depth = np.array(depth_arr*MM_TO_METERS, np.float32)
-        self._cur_depth_im = DepthImage(depth, self._frame)
+        
+        
+        try:
+            depth = np.array(depth_arr, np.float32)
+            self._cur_depth_im = DepthImage(depth, self._frame)
+        except Exception as e:
+            print (e)
+        
 
     def _camera_info_callback(self, msg):
         """ Callback for reading camera info. """
@@ -457,8 +466,11 @@ class KinectSensorBridged(CameraSensor):
         timeout = 10
         try:
             rospy.loginfo("waiting to recieve a message from the Kinect")
+            print("Waiting for color image topic.")
             rospy.wait_for_message(self.topic_image_color, sensor_msgs.msg.Image, timeout=timeout)
+            print("Waiting for depth image topic.")
             rospy.wait_for_message(self.topic_image_depth, sensor_msgs.msg.Image, timeout=timeout)
+            print("Waiting for camera info topic.")
             rospy.wait_for_message(self.topic_info_camera, sensor_msgs.msg.CameraInfo, timeout=timeout)
         except rospy.ROSException as e:
             print("KINECT NOT FOUND")
@@ -545,10 +557,25 @@ class GazeboKinectSensorBridged(KinectSensorBridged):
     def __init__(self, quality=Kinect2BridgedQuality.HD, frame='kinect2_rgb_optical_frame'):
         
         super(GazeboKinectSensorBridged, self).__init__
+
+        self._frame = frame
         
         self.topic_image_color = '/camera/image_raw' 
         self.topic_image_depth = '/camera/depth/image_raw'
         self.topic_info_camera = '/camera/camera_info' 
+
+        self._initialized = False
+        self._format = None
+        self._camera_intr = None
+        self._cur_depth_im = None
+        self._running = False
+        self._bridge = CvBridge()
+
+        # if self._frame is None:
+        #     self._frame = 'kinect2_%d' %(self._device_num)
+        # self._color_frame = '%s_color' %(self._frame)
+        # self._ir_frame = self._frame # same as color since we normally use this one
+
         """
         Create a new class for gazebo stuff
         Modify kinect and rgbd factories
@@ -561,6 +588,7 @@ class GazeboKinectSensorBridged(KinectSensorBridged):
             
     def _set_camera_properties(self, msg):
         """ Set the camera intrinsics from an info msg. """
+        print("setting camera intrinsics for GazeboKinectSensorBridged")
         focal_x = msg.K[0]
         focal_y = msg.K[4]
         center_x = msg.K[2]
@@ -572,6 +600,23 @@ class GazeboKinectSensorBridged(KinectSensorBridged):
                                              height=im_height,
                                              width=im_width)
 
+    @property
+    def ir_intrinsics(self):
+        """:obj:`CameraIntrinsics` : The camera intrinsics for the Ensenso IR camera.
+        """
+        return self._camera_intr
+
+    @property
+    def is_running(self):
+        """bool : True if the stream is running, or false otherwise.
+        """
+        return self._running
+
+    @property
+    def frame(self):
+        """:obj:`str` : The reference frame of the sensor.
+        """
+        return self._frame
 
         
 
